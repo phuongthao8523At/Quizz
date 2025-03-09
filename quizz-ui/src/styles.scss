@@ -1,0 +1,27 @@
+/* You can add global styles to this file, and also import other style files */
+@import '../node_modules/bootstrap/scss/functions';
+@import '../node_modules/bootstrap/scss/variables';
+@import '../node_modules/bootstrap/scss/bootstrap';
+@import "@ng-select/ng-select/themes/default.theme.css";
+@import 'ngx-toastr/toastr';
+@import 'ngx-bootstrap/datepicker/bs-datepicker';
+@import 'app/shared/styles/app.min.css';
+@import 'app/shared/styles/icons.min.css';
+// regular style toast
+
+@media (min-width: 992px) {
+  .auth-brand {
+    position: absolute;
+    top: 1rem;
+  }
+}
+
+.table > :not(caption) > * > * {
+  background-color: #fff !important;
+}
+
+
+.hover-me:hover {
+  cursor: pointer;
+  box-shadow: rgba(0, 0, 0, 0.25) 0 14px 28px, rgba(0, 0, 0, 0.22) 0 10px 10px;
+}
