@@ -4,8 +4,12 @@ INSERT IGNORE INTO system_settings (setting_id, name, value, created_at, updated
 INSERT IGNORE INTO system_settings (name, value)
 VALUES ('email.host', 'smtp.gmail.com'),
        ('email.port', '587'),
-       ('email.username', 'thaophuongphan2358'),
-       ('email.password', 'bdwd leaw jkdf ssko');
+       ('email.username', ''),
+       ('email.password', '');
+
+
+select *
+from system_settings;
 
 INSERT IGNORE INTO system_settings (name, value)
 VALUES ('email.subject.otp', 'Your OTP Code'),

@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {NgClass, NgComponentOutlet, NgOptimizedImage, NgTemplateOutlet} from '@angular/common';
+import {NgClass, NgTemplateOutlet} from '@angular/common';
 import {AuthenticationService} from '../../shared/service/authentication.service';
 import {ChildMenu, Menu} from '../../shared/model/Menu';
 import {CONSTANT} from '../../shared/constant';
@@ -8,9 +8,7 @@ import {Router, RouterLink, RouterLinkActive} from '@angular/router';
 @Component({
   selector: 'app-side-menu',
   imports: [
-    NgOptimizedImage,
     NgClass,
-    NgComponentOutlet,
     NgTemplateOutlet,
     RouterLink,
     RouterLinkActive
@@ -21,10 +19,9 @@ import {Router, RouterLink, RouterLinkActive} from '@angular/router';
 })
 export class SideMenuComponent implements OnInit {
   menuStudent: Menu[] = [
-    new Menu('Dashboard', 'mdi-home-outline', '/student/home'),
+    new Menu('Home', 'mdi-home-outline', '/student/about'),
     new Menu('Exam', 'mdi-school-outline', '/student/exam', [
-      // new ChildMenu('List Subject', '/student/subject'),
-      // new ChildMenu('List Exam', '/student/exam'),
+      new ChildMenu('Dashboard', '/student/home'),
       new ChildMenu('List Course', '/student/course'),
     ]),
     new Menu('Learning Result', 'mdi-book-education-outline', '/student/result'),
@@ -61,7 +58,7 @@ export class SideMenuComponent implements OnInit {
   }
 
   directTo(menu: Menu) {
-    this.router.navigate([menu.path]);
+    this.router.navigate([menu.path]).then(r => r);
   }
 
   ngOnInit(): void {

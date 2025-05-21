@@ -1,10 +1,9 @@
 import {Component, OnDestroy, OnInit, signal} from '@angular/core';
-import {PageTitleComponent} from '../../page-title/page-title.component';
 import {HttpClient} from '@angular/common/http';
 import {ActivatedRoute, Router} from '@angular/router';
 import {ResponseData} from '../../../shared/model/response-data.model';
 import {ToastrService} from 'ngx-toastr';
-import {DatePipe, NgClass, NgStyle} from '@angular/common';
+import {DatePipe, DecimalPipe, NgClass, NgStyle} from '@angular/common';
 import {BsModalService} from 'ngx-bootstrap/modal';
 import {ConfirmV2Component} from '../../confirm-v2/confirm-v2.component';
 import {FormsModule} from '@angular/forms';
@@ -19,11 +18,11 @@ import {ReviewResponse} from '../../../shared/model/ReviewResponse';
 @Component({
   selector: 'app-start-test',
   imports: [
-    PageTitleComponent,
     NgClass,
     FormsModule,
     NgStyle,
-    DatePipe
+    DatePipe,
+    DecimalPipe
   ],
   templateUrl: './start-test.component.html',
   standalone: true,
@@ -59,6 +58,9 @@ export class StartTestComponent implements OnInit, OnDestroy {
           })
       }
     });
+  minutes!: number;
+  seconds!: number;
+  timerSubscription!: Subscription;
 
   constructor(private http: HttpClient,
               private route: ActivatedRoute,
@@ -107,11 +109,33 @@ export class StartTestComponent implements OnInit, OnDestroy {
           }
           this.originSubmitQuestion = this.buildParam();
           this.data.questions.forEach(q => q.isCheck = !!q.userAnswer);
+          this.startCountdown();
         } else {
           this.toast.error(res.message);
           this.navigateToExam();
         }
       });
+  }
+
+  startCountdown() {
+    let remainingTime = this.data.remainingTime; // Convert to seconds
+    this.updateTime(remainingTime);
+
+    this.timerSubscription = interval(1000).subscribe(() => {
+      if (remainingTime > 0) {
+        remainingTime--;
+        this.updateTime(remainingTime);
+      } else {
+        this.toast.warning('Time is up');
+        this.submitTest();
+        this.timerSubscription.unsubscribe(); // Stop countdown at 0
+      }
+    });
+  }
+
+  updateTime(remainingTime: number) {
+    this.minutes = Math.floor(remainingTime / 60);
+    this.seconds = remainingTime % 60;
   }
 
   getTestReview() {
@@ -141,18 +165,22 @@ export class StartTestComponent implements OnInit, OnDestroy {
     });
     bsRef?.content?.onClick.subscribe((result: boolean) => {
       if (result) {
-        const param = this.buildParam();
-        this.http.post<ResponseData<string>>('api/v2/test/submit-test', param)
-          .subscribe(res => {
-            if (res.success) {
-              this.toast.success('Submit test successfully');
-              this.navigateToExam();
-            } else {
-              this.toast.error(res.message);
-            }
-          });
+        this.submitTest();
       }
     });
+  }
+
+  submitTest() {
+    const param = this.buildParam();
+    this.http.post<ResponseData<string>>('api/v2/test/submit-test', param)
+      .subscribe(res => {
+        if (res.success) {
+          this.toast.success('Submit test successfully');
+          this.navigateToExam();
+        } else {
+          this.toast.error(res.message);
+        }
+      });
   }
 
   buildParam() {
@@ -222,6 +250,9 @@ export class StartTestComponent implements OnInit, OnDestroy {
     this.mouseMoveDetector$.unsubscribe();
     this.tabVisibilityDetector$.unsubscribe();
     this.mouseEnterSubject$.unsubscribe();
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+    }
   }
 
   navigateToExam() {

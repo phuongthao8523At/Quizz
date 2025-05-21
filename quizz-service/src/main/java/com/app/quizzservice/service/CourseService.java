@@ -4,7 +4,9 @@ import com.app.quizzservice.model.Course;
 import com.app.quizzservice.model.PagingContainer;
 import com.app.quizzservice.model.Test;
 import com.app.quizzservice.model.User;
+import com.app.quizzservice.request.dto.CourseDTO;
 import com.app.quizzservice.request.dto.CourseDetail;
+import com.app.quizzservice.request.payload.CourseAboutPayload;
 import com.app.quizzservice.request.response.CourseResponse;
 import com.app.quizzservice.request.response.SubjectCourseRepsonse;
 import com.app.quizzservice.utils.PagingUtil;
@@ -26,26 +28,81 @@ public class CourseService {
         this.writeDb = writeDb;
     }
 
-    public CourseResponse detail(long cid) {
+    public List<CourseDTO> exportCourse(long courseId) {
         var sql = """
-                select t1.course_id,
+                select t.test_id,
+                       t.name               as testName,
+                       u.email,
+                       t.total_questions,
+                       ta.created_at        as testDate,
+                       ta.total_correct,
+                       ta.number_of_warning as totalWarning,
+                       ta.updated_at        as lastUpdate,
+                       t.has_monitor
+                from course c
+                         inner join course_test ct on c.course_id = ct.course_id
+                         inner join test t on ct.test_id = t.test_id
+                         inner join test_attempts ta on t.test_id = ta.test_id
+                         inner join users u on ta.user_id = u.user_id
+                where c.course_id = :courseId;
+                """;
+        return writeDb.query(
+                sql,
+                Map.of("courseId", courseId),
+                BeanPropertyRowMapper.newInstance(CourseDTO.class)
+        );
+    }
+
+    public CourseAboutPayload about() {
+        var sql = """
+                select course_id as aboutId,
+                       course_description as content
+                from course_about
+                """;
+        return writeDb.query(
+                sql,
+                Map.of(),
+                (res, i) -> new CourseAboutPayload(res)
+        ).stream().findFirst().orElse(new CourseAboutPayload(1L, ""));
+    }
+
+    @Transactional
+    public void updateAbout(Long id, String content) {
+        var sql = """
+                INSERT INTO course_about (course_id, course_description)
+                VALUES (:id, :content)
+                ON DUPLICATE KEY UPDATE course_description = :content;
+                """;
+        var params = Map.of("id", id, "content", content);
+        writeDb.update(sql, params);
+    }
+
+
+    public CourseResponse detail(long cid, long userId) {
+        var sql = """
+                 select t1.course_id,
                        t1.course_code,
                        t3.test_id,
                        t3.name,
                        t3.start_date,
                        t3.end_date,
                        t4.subject_id,
-                       t4.name as subject_name,
-                       t4.icon as subject_icon
+                       t4.name                                              as subject_name,
+                       t4.icon                                              as subject_icon,
+                       t3.duration,
+                       IFNULL((select exists(select 1
+                                      from test_attempts ta
+                                      where ta.user_id = :userId
+                                        and ta.test_id = t3.test_id)),0)       as is_attempted
                 from course t1
                          inner join course_test t2 on t2.course_id = t1.course_id
                          inner join test t3 on t3.test_id = t2.test_id
                          inner join subjects t4 on t3.subject_id = t4.subject_id
                 where t1.course_id = :courseId;
-                """;
+                 """;
         var data = writeDb.query(
                 sql,
-                Map.of("courseId", cid),
+                Map.of("courseId", cid, "userId", userId),
                 BeanPropertyRowMapper.newInstance(CourseDetail.class)
         );
         var subjects = data.stream()
@@ -187,7 +244,7 @@ public class CourseService {
         );
         var totalRecords = writeDb.queryForObject(
                 "SELECT COUNT(1) FROM course_detail WHERE course_id = :courseId",
-                Map.of("courseId", 1),
+                Map.of("courseId", courseId),
                 Long.class
         );
         return new PagingContainer<>(page, size, totalRecords, data);
